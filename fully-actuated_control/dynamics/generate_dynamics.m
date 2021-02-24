@@ -1,5 +1,15 @@
 %% Acrobot - Assume no input or external forces
 clear; clc; close all;
+%%
+%   Model taken from appendix of 
+%
+%   Westervelt, Eric R., et al. Feedback control of dynamic bipedal robot 
+%       locomotion. CRC press, 2018.
+%
+%   http://web.eecs.umich.edu/~grizzle/biped_book_web/
+%
+%
+
 
 %% Initialize Symbolics
 syms q1 q2 real
@@ -85,7 +95,7 @@ G = subs(G,...
     [Jcm1,Jcm2,L1,L2,Lcm1,Lcm2,m1,m2,g],...
     [0.03,0.03,1,1,0.2,0.2,0.3,0.3,9.81]);
 G_func = matlabFunction(G,'Vars',q);
-save('loadDynamics_Appendix','D_func','C_func','G_func');
+save('loadDynamics','D_func','C_func','G_func');
 
 
 

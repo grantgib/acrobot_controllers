@@ -1,48 +1,25 @@
 %% Simulate Acrobot from Appendix (pg. 436)
 clear; clc; close all;
+restoredefaultpath;
+addpath(genpath('./'));
 
-params = load('loadDynamics_Appendix');
+
+params = load('loadDynamics');
 params.PD = 1;
 params.Kp = 12;
 params.Kd = 2.5;
-params.q_des = [pi/4; pi/2];
+
+params.q_des = [0 pi/2]';
 params.u_sat = 5;
 
-x_init = [pi/2; -pi/2; 0; 0];  % [q; q_dot]
-tspan = 0:0.05:100;
+x_init = [0; -pi/2; 0; 0];  % [q; q_dot]
+tspan = 0:0.05:5;
 
+disp("Press Key to Begin Simulation...");
+pause
 [t,x] = ode45(@(t,x) acrodyn(t,x,params),tspan,x_init);
 x = x';
 u = calcInput(x,params);  % Calculate Control Inputs that were used
-
-%% Plots
-set(0,'DefaultFigureWindowStyle','docked')
-x_header = {'$q_1$','$q_2$','$\dot{q}_1$','$\dot{q}_1$'};
-figure
-for i = 1:size(x,1)
-    subplot(2,2,i)
-    plot(t,x(i,:));
-    if i <= 2
-        hold on; yline(params.q_des(i),":r");
-        legend('actual','desired','location','best');
-    end
-    grid on;
-    title(x_header{i},'interpreter','latex')
-    xlabel('time');
-    
-end
-sgtitle('States')
-
-u_header = {'$u_1$','$u_2$'};
-figure
-for i = 1:size(u,1)
-    subplot(1,2,i)
-    stairs(t,u(i,:));
-    grid on;
-    title(u_header{i},'interpreter','latex');
-    xlabel('time');
-end
-sgtitle('Motor Torques');
 
 %% Animations
 
@@ -85,8 +62,6 @@ hold on;
 joint2 = scatter(p2_start(1),p2_start(2),5*sz,orange,'filled');
 hold on;
 
-disp("Press Key to Begin Animation...");
-pause
 for i = 1:size(x,2)
     x_i = x(:,i);
     q1_i = x_i(1);
@@ -110,6 +85,35 @@ for i = 1:size(x,2)
     pause(0.01);
 end
 disp("Animation Complete");
+
+%% Plots
+set(0,'DefaultFigureWindowStyle','docked')
+x_header = {'$q_1$','$q_2$','$\dot{q}_1$','$\dot{q}_1$'};
+figure
+for i = 1:size(x,1)
+    subplot(2,2,i)
+    plot(t,x(i,:));
+    if i <= 2
+        hold on; yline(params.q_des(i),":r");
+        legend('actual','desired','location','best');
+    end
+    grid on;
+    title(x_header{i},'interpreter','latex')
+    xlabel('time');
+    
+end
+sgtitle('States')
+
+u_header = {'$u_1$','$u_2$'};
+figure
+for i = 1:size(u,1)
+    subplot(1,2,i)
+    stairs(t,u(i,:));
+    grid on;
+    title(u_header{i},'interpreter','latex');
+    xlabel('time');
+end
+sgtitle('Motor Torques');
 
 %% ODE Function
 function dxdt = acrodyn(t,x,p)
@@ -148,7 +152,7 @@ for i = 1:size(x,2)
     q = x(1:2,i);
     q_dot = x(3:end,i);
     q_error = q - q_desired;
-    u_temp = -Kp*q_error - Kd*q_dot;
+    u_temp = -Kp*q_error - Kd*q_dot; % missing integral term so set-point error exists!
     u(:,i) = max(min(u_temp,u_max),u_min);
 end
 end

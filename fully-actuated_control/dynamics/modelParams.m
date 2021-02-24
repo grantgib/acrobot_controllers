@@ -1,4 +1,5 @@
 %% Model Parameters (into workspace)
+% parameters from textbook
 L1 = 1;
 L2 = 1;
 Lcm1 = 0.2; 
