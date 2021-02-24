@@ -26,12 +26,10 @@ sgtitle('Phase Plots')
 
 %% Energy Plots
 figure
-plot(t,E);
+scatter(t,E,20,'filled');
 grid on;
 xlabel('time');
 ylabel('Total Energy');
-
-
 
 disp('Plots Complete');
 end

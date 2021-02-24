@@ -11,12 +11,18 @@ addpath(genpath('./'));
 params = load('load_dynamics.mat');
 
 % Choose dynamics
-params.num_steps = input("How many steps should be simulated: ");
-params.anim = input("Show Animation? \nEnter (1) for yes and (0) for no: ");
+% params.num_steps = 1000;
+% params.slope_actual = deg2rad(-1); % slopes that work: 6, 0, -1 
+% params.kgain = 1.5;
+% params.anim = 0;
 
+params.num_steps = input("How many steps should be simulated: ");
+params.slope_actual = deg2rad(input("Choose slope to walk on (deg). Downward slope is positive and the reference is 3 deg: "));
+params.kgain = input("Choose passivity gain (default = 1.5): ");
+params.anim = input("Show Animation? \nEnter (1) for yes and (0) for no: ");
 input("Slope set at 3 deg. Press Enter to simulate\n");
 
-params.alpha = deg2rad(3); % pi/50;
+params.slope_ref = deg2rad(3);
 t_traj = [];
 x_traj = [];
 
@@ -33,7 +39,7 @@ for i = 1:params.num_steps
     end
     tspan = 0:0.05:10;
     options = odeset('Event',@(t,x) impact_event(t,x,params));
-    [t,x] = ode45(@(t,x) acrobot_passive_ode(t,x,params),tspan,x_init,options);
+    [t,x] = ode45(@(t,x) acrobot_PBC_ode(t,x,params),tspan,x_init,options);
     t = t';
     x = x';
     
@@ -60,8 +66,13 @@ end
 plot_results(t_traj,x_traj,E_traj,params);
 
 %% Functions
-function [xdot] = acrobot_passive_ode(t,x,p)
-    xdot = p.x_dot_func(x);
+function [xdot] = acrobot_PBC_ode(t,x,p)
+    % compute passivity based control
+    k = p.kgain;
+    u = p.u_func(x,p.slope_ref,p.slope_actual,k);
+    
+    % xdot
+    xdot = p.x_dot_func(x,u);
 end
 
 function [x_impact] = impact_map(x,p)

@@ -15,6 +15,7 @@ end
 
 syms px pz px_dot pz_dot real
 syms qst qsw qst_dot qsw_dot real
+syms uank uhip real
 
 % Body coordinates
 q = [qst; qsw];
@@ -23,8 +24,9 @@ q_dot = [qst_dot; qsw_dot];
 % Floating base coordinates
 qfb = [px; pz; qst; qsw];
 qfb_dot = [px_dot; pz_dot; qst_dot; qsw_dot];
-
 xfb = [qfb; qfb_dot];
+
+u = [uank; uhip];
 
 %% Floating Base Model
 % Positions
@@ -46,13 +48,13 @@ K3 = (1/2)*m*(p3_dot'*p3_dot);
 K = K1 + K2 + K3;
 
 % Potential Energy
-P1 = m*g*(p1(2) - pz);
-P2 = m_h*g*(p2(2) - pz);
-P3 = m*g*(p3(2) - pz);
-P = P1 + P2 + P3;
+V1 = m*g*(p1(2) - pz);
+V2 = m_h*g*(p2(2) - pz);
+V3 = m*g*(p3(2) - pz);
+V = V1 + V2 + V3;
 
 % Total Energy
-E = simplify(K + P);
+E = simplify(K + V);
 
 % Mass Inertia Matrix
 D = jacobian(jacobian(K,qfb_dot),qfb_dot);
@@ -72,15 +74,17 @@ end
 C = simplify(C);
 
 % Gravity Vectory
-G = jacobian(P,qfb)';
+G = jacobian(V,qfb)';
 G = simplify(G);
 
+B = [-1 0; 1 1];
+
 % xdot
-% [D,   -Jst']   [qddot]   [C*qdot     ]   [G]   [0]
-% [Jst,     0] * [ Fst ] + [Jstdot*qdot] + [0] = [0]
+% [D,   -Jst']   [qddot]   [C*qdot     ]   [G]   [B]
+% [Jst,     0] * [ Fst ] + [Jstdot*qdot] + [0] = [0] * u
 Jst = simplify( jacobian(pst,qfb) );
 Jstdot = simplify(jacobian(Jst*qfb_dot,qfb_dot));
-qfb_ddot_Fst = [D,-Jst';Jst, zeros(2,2)] \ ( -[C*qfb_dot;Jstdot*qfb_dot] - [G;zeros(2,1)]);
+qfb_ddot_Fst = [D,-Jst';Jst, zeros(2,2)] \ ( -[C*qfb_dot;Jstdot*qfb_dot] - [G;zeros(2,1)] + [zeros(2,2); B; zeros(2,2)]*u);
 qfb_ddot = qfb_ddot_Fst(1:4);
 
 x_dot = [qfb_dot; qfb_ddot];
@@ -100,6 +104,23 @@ qfb_switch = [psw(1); psw(2); R*q];
 qfb_dot_switch = [0; 0; R*q_dot];
 x_switch = [qfb_switch; qfb_dot_switch];
 
+
+%% Passivity Based Control
+% Controlled symmetry
+syms phi_ref phi_actual real   % beta = ref_slope - actual_slope
+beta = phi_actual - phi_ref;
+Vb = subs(V,[qst,qsw],[qst+beta,qsw+beta]);
+G_beta = jacobian(Vb,qfb)';
+deltaG = G - G_beta;
+u_ctrl_sym = deltaG;
+
+% Passivity based control
+syms k real;
+Eref = 153.238;  % slope = 3deg downward
+u_passivity = -k*(E - Eref)*qfb_dot;
+
+u_control = inv(B) * (u_ctrl_sym(3:4) + u_passivity(3:4));  % remove floating base coord.
+
 %% Generate Functions
 % positions
 pst_func = matlabFunction(pst,'Vars',{qfb});
@@ -109,16 +130,20 @@ p3_func = matlabFunction(p3,'Vars',{qfb});
 psw_func = matlabFunction(psw,'Vars',{qfb});
 
 % ode function
-x_dot_func = matlabFunction(x_dot,'Vars',{xfb});
+x_dot_func = matlabFunction(x_dot,'Vars',{xfb,u});
 x_impact_func = matlabFunction(x_impact,'Vars',{xfb});
 x_switch_func = matlabFunction(x_switch,'Vars',{xfb});
 
 % energy
 E_func = matlabFunction(E,'Vars',{xfb});
 
+% control
+u_func = matlabFunction(u_control,'Vars',{xfb,phi_ref,phi_actual,k});
+
 save('load_dynamics','L',...
     'pst_func','p1_func','p2_func','p3_func','psw_func',...
     'x_dot_func','x_impact_func','x_switch_func',...
-    'E_func');
+    'E_func',...
+    'u_func');
 disp('Dynamics Saved!');
 
