@@ -17,7 +17,7 @@ params = load('load_dynamics.mat');
 % params.anim = 0;
 
 params.num_steps = input("How many steps should be simulated: ");
-params.slope_actual = deg2rad(input("Choose slope to walk on (deg). Downward slope is positive and the reference is 3 deg: "));
+params.slope_actual = deg2rad(input("Choose slope to walk on (deg).\n  Downward slope is positive and the reference is 3 deg.\n  Try 6,3,0,-1: "));
 params.kgain = input("Choose passivity gain (default = 1.5): ");
 params.anim = input("Show Animation? \nEnter (1) for yes and (0) for no: ");
 input("Slope set at 3 deg. Press Enter to simulate\n");
